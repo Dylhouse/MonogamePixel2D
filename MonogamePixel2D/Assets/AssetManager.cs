@@ -15,6 +15,10 @@ public class AssetManager
     private const string AtlasPrefix = "atlas";
     private const string AnimationPrefix = "anim";
 
+    private static readonly JsonSerializerOptions jsonOptions = new() {
+        PropertyNameCaseInsensitive = true
+    };
+
 
 
     private readonly Dictionary<string, IComplexDrawable> sprites = [];
@@ -22,10 +26,10 @@ public class AssetManager
 
     public AssetManager(ContentManager content, string dataDir, string assetDir)
     {
-        var dataPaths = Directory.GetFiles(dataDir, "*", SearchOption.AllDirectories)
+        var dataPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, dataDir), "*", SearchOption.AllDirectories)
             .ToDictionary(Path.GetFileName, path => path);
 
-        var assetPaths = Directory.GetFiles(assetDir, "*", SearchOption.AllDirectories);
+        var assetPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories);
 
         foreach (var assetPath in assetPaths)
         {
@@ -49,7 +53,7 @@ public class AssetManager
                     try
                     {
                         var animJson = File.ReadAllText(dataPaths[assetFileName + ".json"]);
-                        var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson);
+                        var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson, jsonOptions);
                         var texture = content.Load<Texture2D>(assetContentPath);
 
                         animations.Add(assetName, AnimatedSprite.LoadWithDTO(texture, dto));
@@ -93,8 +97,6 @@ public class AssetManager
         }
     }
     #endregion
-
-    }
     private static bool IsValidAsset(string fileName)
     {
         var delimeterIndex = fileName.IndexOf(PrefixDelimiter);

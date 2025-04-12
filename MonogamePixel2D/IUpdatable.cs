@@ -13,5 +13,5 @@ public interface IUpdatable
     /// Updates the object based on the elapsed time between frames.
     /// </summary>
     /// <param name="gameTime">Game state and time data.</param>
-    void Update(GameTime gameTime);
+    public void Update(GameTime gameTime);
 }
