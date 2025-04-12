@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Security.AccessControl;
@@ -14,7 +15,7 @@ namespace MonoGamePixel2D.Assets.Graphics.Animations;
 /// </summary>
 public class AnimatedSprite : IComplexDrawable, IUpdatable
 {
-    public const string DEFAULT_SECTION_NAME = "default";
+    internal const string DEFAULT_SECTION_NAME = "default";
 
     /// <inheritdoc/>
     public Texture2D Texture { get; set; }
@@ -32,6 +33,10 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     public bool Looping { get; set; }
 
     private double speed = 1.0d;
+
+    /// <summary>
+    /// The speed factor at which the animation will play. Defaults to 1.0 (regular playback speed).
+    /// </summary>
     public double Speed
     {
         get { return speed; }
@@ -60,7 +65,12 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// The duration (in milliseconds) of the current frame. The frame will advance
     /// once <c>FrameProgress</c> is greater than or equal to this.
     /// </summary>
-    public int FrameDuration { get { return frame.Duration; } }
+    public int FrameDuration { get => frame.Duration; }
+
+    /// <summary>
+    /// Returns the source rectangle of the current frame.
+    /// </summary>
+    public Rectangle FrameSourceRectangle { get => frame.SourceRectangle; }
 
     /// <summary>
     /// The <c>AnimationDirection</c> that will be used if no <c>AnimationSection</c> is given when
@@ -72,6 +82,12 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
         set => DefaultSection.Direction = value;
     }
 
+    /// <summary>
+    /// Invoked whenever the frame changes. Can be used to reduce the amount of draw calls by
+    /// only drawing when/if the frame changes.
+    /// </summary>
+    public event Action? FrameChanged;
+
     private int direction = 1;
 
     private Frame frame;
@@ -81,6 +97,8 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
 
     private AnimationSection section;
     private readonly Dictionary<string, AnimationSection> sections;
+
+    #region Constructors
 
     internal static AnimatedSprite LoadWithDTO(Texture2D texture, AnimatedSpriteDTO DTO)
     {
@@ -96,7 +114,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
 
         var sectionsDict = sections.ToDictionary(section => section.Name, section => section);
 
-        sectionsDict.Add("default", new AnimationSection(0, frames.Length));
+        sectionsDict.Add("default", new AnimationSection(0, frames.Length - 1));
         this.sections = sectionsDict;
 
         ReadyAnimation("default");
@@ -111,11 +129,13 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
 
         var sectionsDict = new Dictionary<string, AnimationSection>
         {
-            { "default", new AnimationSection(0, frames.Length) }
+            { "default", new AnimationSection(0, frames.Length - 1) }
         };
 
         sections = sectionsDict;
     }
+
+    #endregion
 
     /// <summary>
     /// Causes the animation to start playing using the given animation section. Does <b>not</b> reset
@@ -126,7 +146,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     public void Play(string sectionName)
     {
         ReadyAnimation(sectionName);
-        IsPlaying = true;
+        Play();
     }
 
     /// <summary>
@@ -189,6 +209,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
         FrameProgress = 0;
     }
 
+    #region IComplexDrawable
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Color color)
     {
         spriteBatch.Draw(Texture, destinationRectangle, frame.SourceRectangle, color);
@@ -268,7 +289,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
         var size = scrRect.Width * scrRect.Height;
         Texture.GetData(0, scrRect, data, 0, size);
     }
-
+    #endregion
     private void Loop()
     {
         switch (section.Direction)
@@ -311,6 +332,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
             if (direction == 1 && FrameIndex >= section.EndIndex || direction == -1 && FrameIndex <= section.StartIndex) Loop();
             else FrameIndex += direction;
 
+            FrameChanged?.Invoke();
             frame = frames[FrameIndex];
         }
     }

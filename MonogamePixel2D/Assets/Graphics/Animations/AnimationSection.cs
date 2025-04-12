@@ -6,7 +6,6 @@ namespace MonoGamePixel2D.Assets.Graphics.Animations;
 public class AnimationSection
 {
     public string Name { get; init; }
-
     public int StartIndex { get; init; }
     public int EndIndex { get; init; }
 
