@@ -27,7 +27,8 @@ public class AssetManager
     public AssetManager(ContentManager content, string dataDir, string assetDir)
     {
         var dataPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, dataDir), "*", SearchOption.AllDirectories)
-            .ToDictionary(Path.GetFileName, path => path);
+            .Where(path => Path.GetFileName(path) != null)
+            .ToDictionary(path => Path.GetFileName(path)!, path => path);
 
         var assetPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories);
 
@@ -69,6 +70,11 @@ public class AssetManager
         }
     }
 
+    /// <summary>
+    /// Returns the requested sprite.
+    /// </summary>
+    /// <param name="name">The name of the sprite.</param>
+    /// <returns>The sprite.</returns>
     public IComplexDrawable GetSprite(string name)
     {
         try
@@ -78,7 +84,7 @@ public class AssetManager
 
         catch (KeyNotFoundException e)
         {
-            Console.WriteLine("Sprite name: " + name + " was not found! " + e.Message);
+            Console.WriteLine("Sprite name: " + name + " was not found. " + e.Message);
             return null;
         }
     }
