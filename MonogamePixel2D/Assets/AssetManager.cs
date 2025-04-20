@@ -8,6 +8,10 @@ using MonoGamePixel2D.Assets.Graphics.Animations;
 namespace MonoGamePixel2D.Assets;
 
 #region Public Methods
+
+/// <summary>
+/// Class to easily load and obtain assets.
+/// </summary>
 public class AssetManager
 {
     private const char PrefixDelimiter = '_';
@@ -24,6 +28,12 @@ public class AssetManager
     private readonly Dictionary<string, IComplexDrawable> sprites = [];
     private readonly Dictionary<string, AnimatedSprite> animations = [];
 
+    /// <summary>
+    /// Initializes a new AssetManager. <b>Make sure to call in <c>LoadContent</c></b>.
+    /// </summary>
+    /// <param name="content">ContentManager to load content</param>
+    /// <param name="dataDir">Directory of JSON or other data</param>
+    /// <param name="assetDir">Directory of assets</param>
     public AssetManager(ContentManager content, string dataDir, string assetDir)
     {
         var dataPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, dataDir), "*", SearchOption.AllDirectories)

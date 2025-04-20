@@ -42,11 +42,11 @@ public class GameWindowData
     /// <summary>
     /// The X offset of the virtual render target on the user's display.
     /// </summary>
-    public int VirtualXOffset { get { return Gameport.X; } }
+    public int XOffset { get { return Gameport.X; } }
     /// <summary>
     /// The Y offset of the virtual render target on the user's display.
     /// </summary>
-    public int VirtualYOffset { get { return Gameport.Y; } }
+    public int YOffset { get { return Gameport.Y; } }
 
     /// <summary>
     /// The rectangle of the upscaled virtual render target that

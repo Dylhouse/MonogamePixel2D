@@ -1,10 +1,12 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
+﻿using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace MonoGamePixel2D;
 
@@ -15,71 +17,164 @@ public static class InputManager
 {
     private static KeyboardState _currentKeyboardState;
     private static KeyboardState _previousKeyboardState;
-    private static Dictionary<string, Keys[]> _inputKeys = [];
+
+    private static MouseState _currentMouseState;
+    private static MouseState _previousMouseState;
+
+    private static GamePadState _currentGamepadState;
+    private static GamePadState _previousGamepadState;
+
+    private readonly static Dictionary<string, InputAction> _actions = [];
+
+    #region InputAction
 
     /// <summary>
-    /// Adds a new input to the input manager.
+    /// Represents a game input action that can be activated by an arrangement of keyboard keys,
+    /// buttons, or mouse buttons.
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="keys"></param>
-    public static void AddKeyInput(string name, params Keys[] keys)
+    public struct InputAction
     {
-        _inputKeys.Add(name, keys);
-    }
+        /// <summary>
+        /// The keys that are polled for input.
+        /// </summary>
+        public Keys[]? Keys;
 
-    #region Get Input    
+        /// <summary>
+        /// The buttons that are polled for input.
+        /// </summary>
+        public Buttons[]? Buttons;
 
-    /// <summary>
-    /// ADD ERROR HANDLING!!!
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    public static bool GetInputPressed(string input)
-    {
-        foreach (Keys key in _inputKeys[input])
+        /// <summary>
+        /// The mouse buttons that are polled for input.
+        /// </summary>
+        public MouseButtons[]? MouseButtons;
+
+        internal readonly bool Pressed(KeyboardState keyState, GamePadState padState, MouseState mouseState)
         {
-            if (_currentKeyboardState.IsKeyDown(key)) return true;
+            if (Keys != null)
+            {
+                foreach (Keys key in Keys)
+                {
+                    if (keyState.IsKeyDown(key)) return true;
+                }
+            }
+            if (Buttons != null)
+            {
+                throw new NotImplementedException("Gamepad support isn't implemented yet, go tell Liam to do it.");
+            }
+            if (MouseButtons != null)
+            {
+                foreach (MouseButtons button in MouseButtons)
+                {
+                    if (GetMouseButtonState(mouseState, button) == ButtonState.Pressed) return true;
+                }
+            }
+            return false;
         }
-        return false;
+
+        internal bool Released(KeyboardState keyState, GamePadState padState, MouseState mouseState) =>
+            !Pressed(keyState, padState, mouseState);
     }
 
     /// <summary>
-    /// ADD ERROR HANDLING!!!
+    /// Defines the buttons on a mouse.
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    public static bool GetInputReleased(string input)
+    public enum MouseButtons
     {
-        return !GetInputPressed(input);
+        /// <summary>
+        /// Left Mouse Button; MouseButton1.
+        /// </summary>
+        LeftButton,
+
+        /// <summary>
+        /// Right Mouse Button; MouseButton2.
+        /// </summary>
+        RightButton,
+
+        /// <summary>
+        /// Middle Mouse Button; MouseButton3.
+        /// </summary>
+        MiddleButton,
+
+        /// <summary>
+        /// Back side button; MouseButton4; XButton1.
+        /// </summary>
+        Button4,
+
+        /// <summary>
+        /// Front side button; MouseButton5; XButton2.
+        /// </summary>
+        Button5
     }
+    #endregion
 
     /// <summary>
-    /// ADD ERROR HANDLING!!!
+    /// Adds a new action to the input manager.
     /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    public static bool GetInputJustPressed(string input)
+    /// <param name="name">Name of the action.</param>
+    /// <param name="action">The action, containing its associated inputs.</param>
+    public static void AddAction(string name, InputAction action) => _actions.Add(name, action);
+
+
+
+    #region Get Action
+
+    /// <summary>
+    /// Polls an action to see whether or not it was pressed as of the most recent <see cref="Update"/> call.
+    /// </summary>
+    /// <param name="action">The name of the action to poll.</param>
+    /// <returns>True if the action was pressed as of the most recent <see cref="Update"/> call.</returns>
+    public static bool GetActionPressed(string action) =>
+        _actions[action].Pressed(_currentKeyboardState, _currentGamepadState, _currentMouseState);
+
+    /// <summary>
+    /// Polls an action to see whether or not it was released (not pressed) as of the most recent <see cref="Update"/> call.
+    /// </summary>
+    /// <param name="action">The name of the action to poll.</param>
+    /// <returns>True if the action was released (not pressed) as of the most recent <see cref="Update"/> call.</returns>
+    public static bool GetActionReleased(string action) => !GetActionPressed(action);
+
+    /// <summary>
+    /// Polls an action to see whether or not it was <i>just</i> pressed (going from released to pressed) as of the most recent <see cref="Update"/> call.
+    /// </summary>
+    /// <param name="action">The name of the action to poll.</param>
+    /// <returns>True if the action was <i>just</i> pressed (going from released to pressed) as of the most recent <see cref="Update"/> call.</returns>
+    public static bool GetActionJustPressed(string action) =>
+        GetActionPressed(action) && _actions[action].Released(_previousKeyboardState, _previousGamepadState, _previousMouseState);
+
+    /// <summary>
+    /// Polls an action to see whether or not it was <i>just</i> released (going from pressed to released) as of the most recent <see cref="Update"/> call.
+    /// </summary>
+    /// <param name="action">The name of the action to poll.</param>
+    /// <returns>True if the action was <i>just</i> released (going from pressed to released) as of the most recent <see cref="Update"/> call.</returns>
+    public static bool GetActionJustReleased(string action) =>
+        GetActionReleased(action) && _actions[action].Pressed(_previousKeyboardState, _previousGamepadState, _previousMouseState);
+
+    private static ButtonState GetMouseButtonState(MouseState state, MouseButtons button)
     {
-        foreach (Keys key in _inputKeys[input])
+        switch (button)
         {
-            if (_currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key)) return true;
+            case MouseButtons.LeftButton:
+                return state.LeftButton;
+
+            case MouseButtons.MiddleButton:
+                return state.MiddleButton;
+
+            case MouseButtons.RightButton:
+                return state.RightButton;
+
+            case MouseButtons.Button4:
+                return state.XButton1;
+
+            case MouseButtons.Button5:
+                return state.XButton2;
+
+            default:
+                throw new Exception("A mouse button that does not exist was passed in.");
         }
-        return false;
     }
 
-    /// <summary>
-    /// ADD ERROR HANDLING!!!
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    public static bool GetInputJustReleased(string input)
-    {
-        foreach (Keys key in _inputKeys[input])
-        {
-            if (_currentKeyboardState.IsKeyUp(key) && _previousKeyboardState.IsKeyDown(key)) return true;
-        }
-        return false;
-    }
+
 
     #endregion
 
@@ -90,5 +185,8 @@ public static class InputManager
     {
         _previousKeyboardState = _currentKeyboardState;
         _currentKeyboardState = Keyboard.GetState();
+
+        _previousMouseState = _currentMouseState;
+        _currentMouseState = Mouse.GetState();
     }
 }
