@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonoGamePixel2D
+namespace MonoGamePixel2D.Input
 {
     /// <summary>
     /// Static class for managing mouse input. Methods involving the window/virtual target necessitate
@@ -63,6 +63,7 @@ namespace MonoGamePixel2D
         /// <returns>The virtual mouse pos clamped to the virtual render target's bounds.</returns>
         public static Point GetVirtualMousePosClamped()
         {
+            Debug.Assert(_windowData != null);
             var pos = GetVirtualMousePos();
             pos.X = Math.Clamp(pos.X, 0, _windowData.VirtualWidth);
             pos.Y = Math.Clamp(pos.Y, 0, _windowData.VirtualHeight);

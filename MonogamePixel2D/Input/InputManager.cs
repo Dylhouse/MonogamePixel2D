@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static System.Collections.Specialized.BitVector32;
 
-namespace MonoGamePixel2D;
+namespace MonoGamePixel2D.Input;
 
 /// <summary>
 /// Static class for managing inputs, rebinding, etc.
@@ -25,88 +25,6 @@ public static class InputManager
     private static GamePadState _previousGamepadState;
 
     private readonly static Dictionary<string, InputAction> _actions = [];
-
-    #region InputAction
-
-    /// <summary>
-    /// Represents a game input action that can be activated by an arrangement of keyboard keys,
-    /// buttons, or mouse buttons.
-    /// </summary>
-    public struct InputAction
-    {
-        /// <summary>
-        /// The keys that are polled for input.
-        /// </summary>
-        public Keys[]? Keys;
-
-        /// <summary>
-        /// The buttons that are polled for input.
-        /// </summary>
-        public Buttons[]? Buttons;
-
-        /// <summary>
-        /// The mouse buttons that are polled for input.
-        /// </summary>
-        public MouseButtons[]? MouseButtons;
-
-        internal readonly bool Pressed(KeyboardState keyState, GamePadState padState, MouseState mouseState)
-        {
-            if (Keys != null)
-            {
-                foreach (Keys key in Keys)
-                {
-                    if (keyState.IsKeyDown(key)) return true;
-                }
-            }
-            if (Buttons != null)
-            {
-                throw new NotImplementedException("Gamepad support isn't implemented yet, go tell Liam to do it.");
-            }
-            if (MouseButtons != null)
-            {
-                foreach (MouseButtons button in MouseButtons)
-                {
-                    if (GetMouseButtonState(mouseState, button) == ButtonState.Pressed) return true;
-                }
-            }
-            return false;
-        }
-
-        internal bool Released(KeyboardState keyState, GamePadState padState, MouseState mouseState) =>
-            !Pressed(keyState, padState, mouseState);
-    }
-
-    /// <summary>
-    /// Defines the buttons on a mouse.
-    /// </summary>
-    public enum MouseButtons
-    {
-        /// <summary>
-        /// Left Mouse Button; MouseButton1.
-        /// </summary>
-        LeftButton,
-
-        /// <summary>
-        /// Right Mouse Button; MouseButton2.
-        /// </summary>
-        RightButton,
-
-        /// <summary>
-        /// Middle Mouse Button; MouseButton3.
-        /// </summary>
-        MiddleButton,
-
-        /// <summary>
-        /// Back side button; MouseButton4; XButton1.
-        /// </summary>
-        Button4,
-
-        /// <summary>
-        /// Front side button; MouseButton5; XButton2.
-        /// </summary>
-        Button5
-    }
-    #endregion
 
     /// <summary>
     /// Adds a new action to the input manager.
@@ -149,32 +67,6 @@ public static class InputManager
     /// <returns>True if the action was <i>just</i> released (going from pressed to released) as of the most recent <see cref="Update"/> call.</returns>
     public static bool GetActionJustReleased(string action) =>
         GetActionReleased(action) && _actions[action].Pressed(_previousKeyboardState, _previousGamepadState, _previousMouseState);
-
-    private static ButtonState GetMouseButtonState(MouseState state, MouseButtons button)
-    {
-        switch (button)
-        {
-            case MouseButtons.LeftButton:
-                return state.LeftButton;
-
-            case MouseButtons.MiddleButton:
-                return state.MiddleButton;
-
-            case MouseButtons.RightButton:
-                return state.RightButton;
-
-            case MouseButtons.Button4:
-                return state.XButton1;
-
-            case MouseButtons.Button5:
-                return state.XButton2;
-
-            default:
-                throw new Exception("A mouse button that does not exist was passed in.");
-        }
-    }
-
-
 
     #endregion
 
