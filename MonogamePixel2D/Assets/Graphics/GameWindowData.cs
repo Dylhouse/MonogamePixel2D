@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGamePixel2D.Input;
 
 namespace MonoGamePixel2D.Assets.Graphics;
 
@@ -77,5 +78,21 @@ public class GameWindowData
             (displayHeight - virtualHeight * WindowScale) / 2,
             virtualWidth * WindowScale,
             virtualHeight * WindowScale);
+    }
+
+    /// <summary>
+    /// Sets up the <paramref name="graphicsManager"/> for the new display size, and returns the new virtual render target.
+    /// </summary>
+    /// <param name="graphicsManager">The manager to apply changes to and make the render target with/</param>
+    /// <returns>The new virtual render target.</returns>
+    public RenderTarget2D SetupGameWindow(GraphicsDeviceManager graphicsManager)
+    {
+        MouseManager.SetWindowData(this);
+
+        graphicsManager.PreferredBackBufferWidth = DisplayWidth;
+        graphicsManager.PreferredBackBufferHeight = DisplayHeight;
+        graphicsManager.ApplyChanges();
+
+        return new(graphicsManager.GraphicsDevice, virtualWidth, virtualHeight);
     }
 }

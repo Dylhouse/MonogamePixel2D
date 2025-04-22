@@ -30,28 +30,27 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// Determines whether the animation will loop (as determined by AnimationDirection)
     /// or not once it reaches the final frame.
     /// </summary>
-    public bool Looping { get; set; }
-
-    private double speed = 1.0d;
+    public bool Looping { get; set; } = false;
 
     /// <summary>
     /// The speed factor at which the animation will play. Defaults to 1.0 (regular playback speed).
     /// </summary>
     public double Speed
     {
-        get { return speed; }
+        get { return _speed; }
         set
         {
             if (value <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(value), "Speed must be positive");
             }
-            else speed = value;
+            else _speed = value;
         }
     }
+    private double _speed = 1.0d;
 
     /// <summary>
-    /// The current frame index. Use SetFrame to change it.
+    /// The current frame index. Use <see cref="SetAbsoluteFrame(int)"/> to change it.
     /// </summary>
     public int FrameIndex { get; private set; }
 
@@ -59,18 +58,18 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// The progress (in milliseconds) of the current frame. The frame will advance
     /// once this is greater than or equal to <c>FrameDuration</c>.
     /// </summary>
-    public double FrameProgress { get; private set; }
+    public double FrameProgress => _frameProgress;
 
     /// <summary>
     /// The duration (in milliseconds) of the current frame. The frame will advance
     /// once <c>FrameProgress</c> is greater than or equal to this.
     /// </summary>
-    public int FrameDuration { get => frame.Duration; }
+    public int FrameDuration => _frame.Duration;
 
     /// <summary>
     /// Returns the source rectangle of the current frame.
     /// </summary>
-    public Rectangle FrameSourceRectangle { get => frame.SourceRectangle; }
+    public Rectangle FrameSourceRectangle => _frame.SourceRectangle;
 
     /// <summary>
     /// The <c>AnimationDirection</c> that will be used if no <c>AnimationSection</c> is given when
@@ -88,15 +87,19 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// </summary>
     public event Action? FrameChanged;
 
-    private int direction = 1;
+    private int _direction = 1;
 
-    private Frame frame;
-    private readonly Frame[] frames;
+    private double _frameProgress;
 
-    private AnimationSection DefaultSection => sections["default"];
+    private Frame _frame;
+    private readonly Frame[] _frames;
 
-    private AnimationSection section;
-    private readonly Dictionary<string, AnimationSection> sections;
+    private AnimationSection DefaultSection => _sections["default"];
+
+    private AnimationSection _section;
+    private readonly Dictionary<string, AnimationSection> _sections;
+
+    private bool _needsToRestart = false;
 
     #region Constructors
 
@@ -109,30 +112,30 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     {
         Texture = texture;
 
-        this.frames = frames;
-        frame = frames[0];
+        this._frames = frames;
+        _frame = frames[0];
 
         var sectionsDict = sections.ToDictionary(section => section.Name, section => section);
 
         sectionsDict.Add("default", new AnimationSection(0, frames.Length - 1));
-        this.sections = sectionsDict;
+        this._sections = sectionsDict;
 
-        ReadyAnimation("default");
+        ReadyAnimationSection("default");
     }
 
     public AnimatedSprite(Texture2D texture, Frame[] frames)
     {
         Texture = texture;
 
-        this.frames = frames;
-        frame = frames[0];
+        this._frames = frames;
+        _frame = frames[0];
 
         var sectionsDict = new Dictionary<string, AnimationSection>
         {
             { "default", new AnimationSection(0, frames.Length - 1) }
         };
 
-        sections = sectionsDict;
+        _sections = sectionsDict;
     }
 
     #endregion
@@ -145,7 +148,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// to play the entire animation forward. </param>
     public void Play(string sectionName)
     {
-        ReadyAnimation(sectionName);
+        ReadyAnimationSection(sectionName);
         Play();
     }
 
@@ -154,6 +157,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// </summary>
     public void Play()
     {
+        if (_needsToRestart) SetAbsoluteFrame(_section.StartIndex);
         IsPlaying = true;
     }
 
@@ -168,7 +172,7 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// <summary>
     /// Stops the animation, resets frame progress, and sets it to its first frame.
     /// </summary>
-    public void Stop()
+    public void Reset()
     {
         IsPlaying = false;
         SetAbsoluteFrame(0);
@@ -178,11 +182,11 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// Sets the absolute frame, disregarding any sections.
     /// </summary>
     /// <param name="index">The index of the new frame.</param>
-    public void SetAbsoluteFrame(int index)
+    public void SetAbsoluteFrame(System.Index index)
     {
         try
         {
-            frame = frames[index];
+            _frame = _frames[index];
         }
 
         catch (IndexOutOfRangeException e)
@@ -191,39 +195,44 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
                 "The given frame index is invalid.", e);
         }
 
-        FrameIndex = index;
+        FrameIndex = index.Value;
     }
 
+    /// <summary>
+    /// Animates the animation; increases animation progress and updates the frame. 
+    /// The animation will not animate if this is not called.
+    /// </summary>
+    /// <param name="gameTime"><inheritdoc></inheritdoc></param>
     public void Update(GameTime gameTime)
     {
         if (!IsPlaying) return;
-        FrameProgress += gameTime.ElapsedGameTime.TotalMilliseconds * speed;
+        _frameProgress += gameTime.ElapsedGameTime.TotalMilliseconds * _speed;
         TrySetNextFrame();
     }
 
     /// <summary>
-    /// Sets <c>FrameProgress</c> to 0.
+    /// Sets <see cref="FrameProgress"/> to 0.
     /// </summary>
     public void ResetFrameProgress()
     {
-        FrameProgress = 0;
+        _frameProgress = 0;
     }
 
     #region IComplexDrawable
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Color color)
     {
-        spriteBatch.Draw(Texture, destinationRectangle, frame.SourceRectangle, color);
+        spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color);
     }
 
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Rectangle? sourceRectangle, Color color)
     {
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, destinationRectangle, frame.SourceRectangle, color);
+            spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
         spriteBatch.Draw(Texture, destinationRectangle, srcRectangle, color);
     }
 
@@ -232,28 +241,28 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     {
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, destinationRectangle, frame.SourceRectangle, color, rotation, origin.ToVector2(), effects, layerDepth);
+            spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color, rotation, origin.ToVector2(), effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
         spriteBatch.Draw(Texture, destinationRectangle, srcRectangle, color, rotation, origin.ToVector2(), effects, layerDepth);
     }
 
     public void Draw(SpriteBatch spriteBatch, Point position, Color color)
     {
-        spriteBatch.Draw(Texture, position.ToVector2(), frame.SourceRectangle, color);
+        spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color);
     }
 
     public void Draw(SpriteBatch spriteBatch, Point position, Rectangle? sourceRectangle, Color color)
     {
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), frame.SourceRectangle, color);
+            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
         spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color);
     }
 
@@ -262,11 +271,11 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     {
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
         spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
     }
 
@@ -275,44 +284,44 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     {
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
         spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
     }
 
     public void GetData(Color[] data)
     {
-        var scrRect = frame.SourceRectangle;
+        var scrRect = _frame.SourceRectangle;
         var size = scrRect.Width * scrRect.Height;
         Texture.GetData(0, scrRect, data, 0, size);
     }
     #endregion
     private void Loop()
     {
-        switch (section.Direction)
+        switch (_section.Direction)
         {
             case AnimationDirection.Forward:
-                FrameIndex = section.StartIndex;
+                FrameIndex = _section.StartIndex;
                 break;
 
             case AnimationDirection.Reverse:
-                FrameIndex = section.EndIndex;
+                FrameIndex = _section.EndIndex;
                 break;
 
             case AnimationDirection.PingPong or AnimationDirection.ReversePingPong:
-                if (direction == 1)
+                if (_direction == 1)
                 {
-                    FrameIndex = section.EndIndex - 1;
-                    direction = -1;
+                    FrameIndex = _section.EndIndex - 1;
+                    _direction = -1;
                 }
 
                 else
                 {
-                    FrameIndex = section.StartIndex + 1;
-                    direction = 1;
+                    FrameIndex = _section.StartIndex + 1;
+                    _direction = 1;
                 }
                 break;
 
@@ -322,36 +331,45 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
 
     private void TrySetNextFrame()
     {
-        while (FrameProgress >= frame.Duration)
+        while (_frameProgress >= _frame.Duration)
         {
-            FrameProgress -= frame.Duration;
+            _frameProgress -= _frame.Duration;
 
             // Checking if should loop
             // greater than is uneccessary, only equal to is necessary, but we cover
             // our bases just in case.
-            if (direction == 1 && FrameIndex >= section.EndIndex || direction == -1 && FrameIndex <= section.StartIndex) Loop();
-            else FrameIndex += direction;
+            if (_direction == 1 && FrameIndex >= _section.EndIndex || _direction == -1 && FrameIndex <= _section.StartIndex)
+            {
+                if (Looping) Loop();
+                else
+                {
+                    _needsToRestart = true;
+                    Pause();
+                    ResetFrameProgress();
+                }
+            }
+            else FrameIndex += _direction;
 
             FrameChanged?.Invoke();
-            frame = frames[FrameIndex];
+            _frame = _frames[FrameIndex];
         }
     }
 
-    private void SetInitialDirection() => direction = section.Direction switch
+    private void SetInitialDirection() => _direction = _section.Direction switch
     {
         AnimationDirection.Forward or AnimationDirection.PingPong => 1,
         _ => -1
     };
 
     /// <summary>
-    /// Gets the animation ready to play with an animation section.
+    /// Gets the animation ready to play with an <see cref="AnimationSection"/>.
     /// </summary>
-    /// <param name="sectionName"></param>
-    private void ReadyAnimation(string sectionName)
+    /// <param name="sectionName">The name of the <see cref="AnimationSection"/>.</param>
+    private void ReadyAnimationSection(string sectionName)
     {
-        section = sections[sectionName];
+        _section = _sections[sectionName];
         SetInitialDirection();
-        SetAbsoluteFrame(section.StartIndex);
+        SetAbsoluteFrame(_section.StartIndex);
     }
 
 }
