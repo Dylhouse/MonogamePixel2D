@@ -1,12 +1,7 @@
 ﻿using Microsoft.Xna.Framework.Input;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Contracts;
-using System.Linq;
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Text;
-using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace MonoGamePixel2D.Input;
 
@@ -24,7 +19,13 @@ public static class InputManager
     private static GamePadState _currentGamepadState;
     private static GamePadState _previousGamepadState;
 
+    public static KeyboardState CurrentKeyboardState => _currentKeyboardState;
+    public static KeyboardState PreviousKeyboardState => _previousKeyboardState;
+
+
     private readonly static Dictionary<string, InputAction> _actions = [];
+
+    public static IEnumerable<string> ActionNames => _actions.Keys;
 
     /// <summary>
     /// Adds a new action to the input manager.
@@ -33,7 +34,13 @@ public static class InputManager
     /// <param name="action">The action, containing its associated inputs.</param>
     public static void AddAction(string name, InputAction action) => _actions.Add(name, action);
 
+    public static void RebindAction(string name, InputAction newAction)
+    {
+        if (!_actions.ContainsKey(name)) return;
+        _actions[name] = newAction;
+    }
 
+    public static bool ActionExists(string name) => _actions.ContainsKey(name);
 
     #region Get Action
 

@@ -23,10 +23,26 @@ namespace MonoGamePixel2D.Input
         /// Returns the current <c>MouseState</c> from when <c>Update()</c> was called.
         /// </summary>
         public static MouseState MouseState => _currentMouseState;
+
         /// <summary>
         /// Returns the <c>MouseState</c> from when <c>Update()</c> was previously called.
         /// </summary>
         public static MouseState PreviousMouseState => _previousMouseState;
+
+        /// <summary>
+        /// Gets the change in scroll wheel value between the most recent and previous <see cref="Update"/> calls.
+        /// </summary>
+        /// <returns>The change in scroll wheel value. As velocity, it would be value/ticks.</returns>
+        public static int ScrollWheelChange =>
+            _currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
+
+        /// <summary>
+        /// Gets the change in horizontal scroll wheel value between the most recent and previous <see cref="Update"/> calls.
+        /// </summary>
+        /// <returns>The change in horizontal scroll wheel value. As velocity, it would be value/ticks.</returns>
+        public static int HorizontalScrollWheelChange =>
+            _currentMouseState.HorizontalScrollWheelValue - _previousMouseState.HorizontalScrollWheelValue;
+
         private static GameWindowData? _windowData;
 
         /// <summary>

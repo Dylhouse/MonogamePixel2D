@@ -1,21 +1,26 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Reflection;
-using System.Security.AccessControl;
-using System.Text.Json.Serialization;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using System.Text.Json;
+using System.Xml.Linq;
 
 namespace MonoGamePixel2D.Assets.Graphics.Animations;
 
 /// <summary>
 /// A drawable object that contains multiple frames and and frame sections for animations.
 /// </summary>
-public class AnimatedSprite : IComplexDrawable, IUpdatable
+public class AnimatedSprite : IUpdatable, ILoadableAsset
 {
+    private const string PREFIX = "anim";
     internal const string DEFAULT_SECTION_NAME = "default";
+
+    private static readonly JsonSerializerOptions jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    /// <inheritdoc></inheritdoc>/>
+    public static string Prefix => PREFIX;
 
     /// <inheritdoc/>
     public Texture2D Texture { get; set; }
@@ -87,6 +92,11 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     /// </summary>
     public event Action? FrameChanged;
 
+    /// <summary>
+    /// Invoked whenever the animation reaches the end of the current section.
+    /// </summary>
+    public event Action? Finished;
+
     private int _direction = 1;
 
     private double _frameProgress;
@@ -103,6 +113,16 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
 
     #region Constructors
 
+    /// <inheritdoc></inheritdoc>/>
+    public static object Load(ContentManager content, string contentPath, string path)
+    {
+        var animJson = File.ReadAllText(Path.ChangeExtension(path, ".json"));
+        var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson, jsonOptions);
+        var texture = content.Load<Texture2D>(contentPath);
+
+        return LoadWithDTO(texture, dto);
+    }
+
     internal static AnimatedSprite LoadWithDTO(Texture2D texture, AnimatedSpriteDTO DTO)
     {
         return new AnimatedSprite(texture, DTO.Frames, DTO.Sections);
@@ -112,13 +132,13 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
     {
         Texture = texture;
 
-        this._frames = frames;
+        _frames = frames;
         _frame = frames[0];
 
         var sectionsDict = sections.ToDictionary(section => section.Name, section => section);
 
         sectionsDict.Add("default", new AnimationSection(0, frames.Length - 1));
-        this._sections = sectionsDict;
+        _sections = sectionsDict;
 
         ReadyAnimationSection("default");
     }
@@ -347,6 +367,8 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
                     Pause();
                     ResetFrameProgress();
                 }
+
+                Finished?.Invoke();
             }
             else FrameIndex += _direction;
 
@@ -371,5 +393,4 @@ public class AnimatedSprite : IComplexDrawable, IUpdatable
         SetInitialDirection();
         SetAbsoluteFrame(_section.StartIndex);
     }
-
 }
