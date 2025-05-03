@@ -38,24 +38,25 @@ public class Timer : IUpdatable
         ContinousLoop
     }
 
-    private double _progress;
-    private bool _running = false;
+    private TimeSpan _progress = TimeSpan.Zero;
+
+    private bool _running = true;
 
     #region Properties
     /// <summary>
     /// Determines how the timer will (or won't) loop.
     /// </summary>
-    public LoopMode Loop { get; set; } = LoopMode.NoLoop;
+    public LoopMode Loop { get; set; }
 
     /// <summary>
     /// Returns the time elapsed since the timer started, or has looped
     /// </summary>
-    public double Progress => _progress;
+    public TimeSpan Progress => _progress;
 
     /// <summary>
     /// Returns the time left on the timer.
     /// </summary>
-    public double TimeLeft => Duration - _progress;
+    public TimeSpan TimeLeft => Duration - _progress;
 
     /// <summary>
     /// Returns whether or not the timer has been started.
@@ -66,7 +67,7 @@ public class Timer : IUpdatable
     /// The time the timer starts at, or how long it will need to run until it finishes.
     /// In seconds.
     /// </summary>
-    public double Duration { get; set; }
+    public TimeSpan Duration { get; set; }
 
     #endregion
 
@@ -74,9 +75,11 @@ public class Timer : IUpdatable
     /// Creates a new <c>Timer</c>.
     /// </summary>
     /// <param name="duration">The duration of the timer.</param>
-    public Timer(double duration)
+    /// <param name="loopMode">Determines how the timer will or won't loop when it finishes.</param>
+    public Timer(TimeSpan duration, LoopMode loopMode = LoopMode.NoLoop)
     {
         Duration = duration;
+        Loop = loopMode;
     }
 
     /// <summary>
@@ -106,7 +109,7 @@ public class Timer : IUpdatable
     /// </summary>
     public void Reset()
     {
-        _progress = 0;
+        _progress = TimeSpan.Zero;
     }
     #endregion
 
@@ -114,7 +117,8 @@ public class Timer : IUpdatable
     public void Update(GameTime gameTime)
     {
         if (!_running) return;
-        _progress += gameTime.ElapsedGameTime.TotalSeconds;
+
+        _progress += gameTime.ElapsedGameTime;
 
         if (Loop == LoopMode.ContinousLoop)
         {
@@ -133,7 +137,7 @@ public class Timer : IUpdatable
                 Finished?.Invoke();
 
                 if (Loop == LoopMode.NoLoop) _running = false;
-                else _progress = 0;
+                else _progress = TimeSpan.Zero;
             }
         }
     }

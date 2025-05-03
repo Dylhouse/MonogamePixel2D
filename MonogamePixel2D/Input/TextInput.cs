@@ -2,23 +2,13 @@
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Frozen;
 using System.Collections.Immutable;
-using System.Diagnostics;
 using System.Text;
 
 namespace MonoGamePixel2D.Input
 {
-    public static class TextInputManager
+    public class TextInput : IUpdatable
     {
-        private static readonly TimeSpan RepeatDelay = TimeSpan.FromMilliseconds(250.0d);
-        /// <summary>
-        /// Default windows repeat rate of 30 keystrokes/sec (1/30 sec/keystroke).
-        /// </summary>
-        private static readonly TimeSpan RepeatRate = TimeSpan.FromSeconds(1.0d / 30.0d);
-
-        private static TimeSpan _holdingStartTime;
-        private static TimeSpan _repeatTime = TimeSpan.Zero;
-
-        private static Keys _heldKey;
+        #region Input
 
         #region Key Characters
         private readonly static FrozenDictionary<Keys, char> _keyChars = new Dictionary<Keys, char>()
@@ -71,6 +61,10 @@ namespace MonoGamePixel2D.Input
             { Keys.OemCloseBrackets, ']' },
             { Keys.OemMinus, '-' },
             { Keys.OemComma, ',' },
+            // should never need to get the value of this bc special key, so min value it is for now
+            { Keys.Back, Char.MinValue },
+            { Keys.Left, Char.MinValue },
+            { Keys.Right, Char.MinValue }
         }.ToFrozenDictionary();
 
         private readonly static FrozenDictionary<Keys, char> _altKeyChars = new Dictionary<Keys, char>()
@@ -122,28 +116,52 @@ namespace MonoGamePixel2D.Input
             { Keys.OemOpenBrackets, '{' },
             { Keys.OemCloseBrackets, '}' },
             { Keys.OemMinus, '_' },
-            { Keys.OemComma, '<' }
+            { Keys.OemComma, '<' },
+            // should never need to get the value of this bc special key, so min value it is for now
+            { Keys.Back, Char.MinValue },
+            { Keys.Left, Char.MinValue },
+            { Keys.Right, Char.MinValue }
         }.ToFrozenDictionary();
 
         private readonly static ImmutableArray<Keys> _textKeys = _keyChars.Keys;
         #endregion
 
-       
+        private static TimeSpan RepeatDelay = TimeSpan.FromMilliseconds(333.3d);
+
         /// <summary>
-        /// Adds text input from the keyboard to a <paramref name="stringBuilder"/>.
+        /// Default: windows repeat rate of 30 keystrokes/sec (1/30 sec/keystroke).
         /// </summary>
-        /// <param name="stringBuilder">The <see cref="StringBuilder"/> to add the inputted text to.</param>
-        public static void AppendTextInput(StringBuilder stringBuilder, GameTime gameTime)
+        private static TimeSpan RepeatPeriod = TimeSpan.FromSeconds(1.0d / 30.0d);
+
+        private TimeSpan _holdingStartTime;
+        private TimeSpan _repeatTime = TimeSpan.Zero;
+
+        private Keys _heldKey;
+
+        /// <summary>
+        /// Invoked if the text or cursor position was changed during an <see cref="Update(GameTime)"/> call.
+        /// </summary>
+        public event Action? Changed;
+
+        /// <summary>
+        /// Updates this with any keboard input from the most recent <see cref="InputManager"/> update cycle.
+        /// </summary>
+        /// <param name="gameTime">Used to calculate when a character should start repeating and how fast it repeats.</param>
+        public void Update(GameTime gameTime)
         {
+            var previousCursorIndex = _cursorIndex;
+            var previousString = _stringBuilder.ToString();
+
             var currentState = InputManager.CurrentKeyboardState;
             var previousState = InputManager.PreviousKeyboardState;
 
             bool keyJustPressed = false;
+
             foreach (var key in _textKeys)
             {
                 bool useAltKeys = currentState.IsKeyDown(Keys.LeftShift) || currentState.IsKeyDown(Keys.RightShift);
                 bool capsLock = currentState.CapsLock;
-                
+
                 // handle holding a key to make it go a bunch of times
                 if (_heldKey == key)
                 {
@@ -152,10 +170,10 @@ namespace MonoGamePixel2D.Input
                         if (_holdingStartTime + RepeatDelay < gameTime.TotalGameTime)
                         {
                             _repeatTime += gameTime.ElapsedGameTime;
-                            while (_repeatTime > RepeatRate)
+                            while (_repeatTime > RepeatPeriod)
                             {
-                                stringBuilder.Append(KeyToChar(key, useAltKeys, capsLock));
-                                _repeatTime -= RepeatRate;
+                                HandleKeyInput(key, useAltKeys, capsLock);
+                                _repeatTime -= RepeatPeriod;
                             }
                         }
                     }
@@ -172,17 +190,35 @@ namespace MonoGamePixel2D.Input
                     keyJustPressed = true;
                     _heldKey = key;
 
-                    stringBuilder.Append(KeyToChar(key, useAltKeys, capsLock));
+                    HandleKeyInput(key, useAltKeys, capsLock);
                 }
             }
 
             if (keyJustPressed) _holdingStartTime = gameTime.TotalGameTime;
 
-            var length = stringBuilder.Length;
+            if (!IsChanged(previousCursorIndex, previousString)) Changed?.Invoke();
+        }
 
-            if (length > 0 && currentState.IsKeyDown(Keys.Back) && previousState.IsKeyUp(Keys.Back))
+        private bool IsChanged(int previousCursorIndex, string previousString)
+        {
+            return _cursorIndex == previousCursorIndex && _stringBuilder.ToString() == previousString;
+        }
+
+        private void HandleKeyInput(Keys key, bool shifted, bool capsLock)
+        {
+            switch (key)
             {
-                stringBuilder.Remove(length - 1, 1);
+                case Keys.Back:
+                    Backspace(); break;
+
+                case Keys.Left:
+                    MoveCursor(-1); break;
+
+                case Keys.Right:
+                    MoveCursor(1); break;
+
+                default:
+                    InsertChar(KeyToChar(key, shifted, capsLock)); break;
             }
         }
 
@@ -192,8 +228,58 @@ namespace MonoGamePixel2D.Input
 
             var character = dict[key];
             if (capsLock) character = Char.ToUpper(character);
-            
+
             return character;
+        }
+
+        #endregion
+
+        public StringBuilder Text => _stringBuilder;
+        private readonly StringBuilder _stringBuilder = new();
+
+        private int _cursorIndex = 0;
+
+        /// <summary>
+        /// The index of the text cursor.
+        /// </summary>
+        public int CursorIndex
+        {
+            get => _cursorIndex;
+            set
+            {
+                if (_cursorIndex == value) return;
+                
+                if (value < 0) _cursorIndex = 0;
+                else if (value > _stringBuilder.Length) _cursorIndex = value;
+            }
+        }
+
+        /// <summary>
+        /// Clears the text.
+        /// </summary>
+        public void Clear()
+        {
+            _stringBuilder.Clear();
+            _cursorIndex = 0;
+        }
+
+        public void Backspace()
+        {
+            if (_cursorIndex == 0) return;
+            _stringBuilder.Remove(_cursorIndex-- - 1, 1);
+        }
+
+        public void MoveCursor(int dir) =>
+            _cursorIndex = Math.Clamp(_cursorIndex + dir, 0, _stringBuilder.Length);
+
+        public void InsertChar(char @char)
+        {
+            _stringBuilder.Insert(_cursorIndex++, @char);
+        }
+
+        public override string ToString()
+        {
+            return _stringBuilder.ToString();
         }
     }
 }

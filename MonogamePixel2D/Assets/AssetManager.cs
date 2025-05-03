@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.Json;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -6,8 +7,6 @@ using MonoGamePixel2D.Assets.Graphics.Animations;
 
 
 namespace MonoGamePixel2D.Assets;
-
-#region Public Methods
 
 /// <summary>
 /// Class to easily load and obtain assets.
@@ -24,23 +23,40 @@ public class AssetManager
     };
 
 
+    private readonly FrozenDictionary<string, string> _assetPaths;
 
-    private readonly Dictionary<string, IComplexDrawable> sprites = [];
-    private readonly Dictionary<string, AnimatedSprite> animations = [];
+    private ContentManager _content;
 
     /// <summary>
-    /// Initializes a new AssetManager. <b>Make sure to call in <c>LoadContent</c></b>.
+    /// Initializes a new AssetManager. <b>Make sure to call in <see cref="Microsoft.Xna.Framework.Game.LoadContent"/></b>.
     /// </summary>
-    /// <param name="content">ContentManager to load content</param>
-    /// <param name="dataDir">Directory of JSON or other data</param>
-    /// <param name="assetDir">Directory of assets</param>
-    public AssetManager(ContentManager content, string dataDir, string assetDir)
+    /// <param name="content">Used to load content.</param>
+    /// <param name="assetDir">Directory of assets and their sidecar files.</param>
+    public AssetManager(ContentManager content, string assetDir)
     {
-        var dataPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, dataDir), "*", SearchOption.AllDirectories)
+        _content = content;
+
+        var dict = new Dictionary<string, string>();
+        foreach (var path in Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories))
+        {
+            if (Path.GetExtension(path) == ".json") continue;
+
+            if (!dict.TryAdd(Path.GetFileNameWithoutExtension(path), path)) throw new InvalidOperationException("There cannot be two assets with the same name.");
+        }
+
+        _assetPaths = dict.ToFrozenDictionary();
+
+
+        /*
+        _content = content;
+
+        dataPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, dataDir), "*", SearchOption.AllDirectories)
             .Where(path => Path.GetFileName(path) != null)
             .ToDictionary(path => Path.GetFileName(path)!, path => path);
 
         var assetPaths = Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories);
+
+        _assetPaths = assetPaths.ToDictionary(path => Path.GetFileNameWithoutExtension(path), path => path);
 
         foreach (var assetPath in assetPaths)
         {
@@ -54,6 +70,7 @@ public class AssetManager
             switch (assetType)
             {
                 case AtlasPrefix:
+                    break;
 
                 case StaticSpritePrefix:
                     var sprite = new ImageSprite(content.Load<Texture2D>(assetContentPath));
@@ -77,8 +94,82 @@ public class AssetManager
 
                     break;
             }
+        
         }
+        */
     }
+
+    /// <summary>
+    /// Returns the requested sprite.
+    /// </summary>
+    /// <param name="name">The name of the sprite.</param>
+    /// <returns>The sprite.</returns>
+    public IComplexDrawable GetSprite(string name)
+    {
+        if (_assetPaths.TryGetValue(AtlasPrefix + PrefixDelimiter + name, out var path))
+        {
+            return null;
+        }
+
+        else if (_assetPaths.TryGetValue(StaticSpritePrefix + PrefixDelimiter + name, out path))
+        {
+            return new ImageSprite(_content.Load<Texture2D>(ContentPathOf(path)));
+        }
+
+        else throw new Exception();
+    }
+
+    public AnimatedSprite GetAnimatedSprite(string name)
+    {
+        var path = _assetPaths[AnimationPrefix + PrefixDelimiter + name];
+
+        var animJson = File.ReadAllText(path + ".json");
+        var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson, jsonOptions);
+        var texture = _content.Load<Texture2D>(ContentPathOf(path));
+
+        return AnimatedSprite.LoadWithDTO(texture, dto);
+    }
+
+    public T GetAsset<T>(string assetName) where T : ILoadableAsset
+    {
+        var path = _assetPaths[T.Prefix + PrefixDelimiter + assetName];
+        return (T) T.Load(_content, ContentPathOf(path), path);
+    }
+
+    /*
+    public T GetAsset<T>(string assetName)
+    {
+        string unprefixedPath = PrefixDelimiter.ToString();
+        string prefixlessPath = PrefixDelimiter + Path.Combine(_content.RootDirectory, assetName);
+
+        Type type = typeof(T);
+
+        if (type == typeof(AnimatedSprite))
+        {
+            var path = _assetPaths[assetName];
+
+            var animJson = File.ReadAllText(path + ".json");
+            var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson, jsonOptions);
+            var texture = _content.Load<Texture2D>(AnimationPrefix + assetName);
+
+            return (T)(object)AnimatedSprite.LoadWithDTO(texture, dto);
+        }
+
+        else if (type == typeof(IComplexDrawable))
+        {
+            var atlasPath = AtlasPrefix + prefixlessPath;
+            //implement this, have early return if it is. If not atlas, try static
+
+            var staticPath = StaticSpritePrefix + prefixlessPath;
+            return (T)(object)new ImageSprite(_content.Load<Texture2D>(staticPath));
+        }
+
+        throw new InvalidOperationException("The asset doesn't exist, or the type is wrong.");
+    }
+    */
+
+
+    /*
 
     /// <summary>
     /// Returns the requested sprite.
@@ -112,13 +203,10 @@ public class AssetManager
             return null;
         }
     }
-    #endregion
-    private static bool IsValidAsset(string fileName)
-    {
-        var delimeterIndex = fileName.IndexOf(PrefixDelimiter);
-        if (delimeterIndex == -1) return false;
-        return true;
-    }
+    */
+
+    private static bool IsValidAsset(string fileName) =>
+        fileName.Contains(PrefixDelimiter);
 
     /// <summary>
     /// Gets the string before the prefix delimeter (The asset prefix/type).
@@ -146,8 +234,9 @@ public class AssetManager
         return name[(delimeterIndex + 1)..];
     }
 
-    private static string RemoveExtension(string path)
-    {
-        return path[..path.IndexOf('.')];
-    }
+    private string ContentPathOf(string path) =>
+        RemoveExtension(Path.GetRelativePath(_content.RootDirectory, path));
+
+    private static string RemoveExtension(string path) =>
+        path[..path.IndexOf('.')];
 }
