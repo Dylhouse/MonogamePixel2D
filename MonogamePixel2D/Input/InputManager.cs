@@ -25,6 +25,9 @@ public static class InputManager
 
     private readonly static Dictionary<string, InputAction> _actions = [];
 
+    /// <summary>
+    /// Gets the names of all the currently registered actions.
+    /// </summary>
     public static IEnumerable<string> ActionNames => _actions.Keys;
 
     /// <summary>
@@ -34,12 +37,22 @@ public static class InputManager
     /// <param name="action">The action, containing its associated inputs.</param>
     public static void AddAction(string name, InputAction action) => _actions.Add(name, action);
 
+    /// <summary>
+    /// Rebinds an action.
+    /// </summary>
+    /// <param name="name">Name of the action.</param>
+    /// <param name="newAction">The new action to replace the old one, containing its associated inputs.</param>
     public static void RebindAction(string name, InputAction newAction)
     {
         if (!_actions.ContainsKey(name)) return;
         _actions[name] = newAction;
     }
 
+    /// <summary>
+    /// Returns whether or not an action of the given name exists.
+    /// </summary>
+    /// <param name="name">Name of the action.</param>
+    /// <returns><c>true</c> if the action exists; <c>false</c> otherwise.</returns>
     public static bool ActionExists(string name) => _actions.ContainsKey(name);
 
     #region Get Action

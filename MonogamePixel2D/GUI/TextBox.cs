@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using IDrawable = MonoGamePixel2D.Assets.Graphics.IDrawable;
 
-namespace MonoGamePixel2D
+namespace MonoGamePixel2D.GUI
 {
     public class TextBox : IUpdatable, IDrawable
     {

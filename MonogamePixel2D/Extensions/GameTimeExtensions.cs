@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MonoGamePixel2D
+namespace MonoGamePixel2D.Extensions
 {
     /// <summary>
     /// Extensions for <see cref="GameTime"/> to easily access useful information about the game's running state.
@@ -17,6 +17,6 @@ namespace MonoGamePixel2D
         /// </summary>
         /// <param name="gameTime"></param>
         /// <returns>The current FPS of the game.</returns>
-        public static double GetFPS(this GameTime gameTime) => 1 / gameTime.ElapsedGameTime.TotalSeconds;
+        public static double GetFPS(this GameTime gameTime) => 1.0d / gameTime.ElapsedGameTime.TotalSeconds;
     }
 }
