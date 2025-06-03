@@ -55,6 +55,9 @@ public class GameWindowData
     /// </summary>
     public Rectangle Gameport { get; }
 
+    private Rectangle vRect;
+    public Rectangle VirtualPort { get => vRect; }
+
     /// <summary>
     /// Constructs a new instance.
     /// </summary>
@@ -64,6 +67,8 @@ public class GameWindowData
     {
         this.virtualWidth = virtualWidth;
         this.virtualHeight = virtualHeight;
+
+        vRect = new Rectangle(0, 0, virtualWidth, virtualHeight);
 
         displayWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
         displayHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;

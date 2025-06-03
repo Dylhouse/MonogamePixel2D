@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <Folder Include="Display\" />
+    <Folder Include="Tiles\" />
   </ItemGroup>
 
 </Project>

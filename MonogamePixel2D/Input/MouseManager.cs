@@ -43,6 +43,18 @@ namespace MonoGamePixel2D.Input
         public static int HorizontalScrollWheelChange =>
             _currentMouseState.HorizontalScrollWheelValue - _previousMouseState.HorizontalScrollWheelValue;
 
+        /// <summary>
+        /// Gets the change in mouse position on the screen between the most recent and previous <see cref="Update"/> calls.
+        /// </summary>
+        public static Point AbsoluteMousePositionChange =>
+            _currentMouseState.Position - _previousMouseState.Position;
+
+        /// <summary>
+        /// Gets the change in mouse position on the virtual render target between the most recent and previous <see cref="Update"/> calls.
+        /// </summary>
+        public static Point VirtualMousePositionChange =>
+            VirtualPos(_currentMouseState) - VirtualPos(_previousMouseState);
+
         private static GameWindowData? _windowData;
 
         /// <summary>
@@ -67,9 +79,7 @@ namespace MonoGamePixel2D.Input
         public static Point GetVirtualMousePos()
         {
             Debug.Assert(_windowData != null);
-            int mouseX = (_currentMouseState.X + _windowData.XOffset) / _windowData.WindowScale;
-            int mouseY = (_currentMouseState.Y - _windowData.YOffset) / _windowData.WindowScale;
-            return new Point(mouseX, mouseY);
+            return VirtualPos(_currentMouseState);
         }
 
         /// <summary>
@@ -93,6 +103,14 @@ namespace MonoGamePixel2D.Input
         {
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
+        }
+
+        private static Point VirtualPos(MouseState state)
+        {
+            Debug.Assert(_windowData != null);
+            int mouseX = (state.X + _windowData.XOffset) / _windowData.WindowScale;
+            int mouseY = (state.Y - _windowData.YOffset) / _windowData.WindowScale;
+            return new Point(mouseX, mouseY);
         }
     }
 }
