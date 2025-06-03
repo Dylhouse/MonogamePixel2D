@@ -32,7 +32,7 @@ namespace MonoGamePixel2D.Collisions
             return false;
         }
 
-        public readonly bool TryGetIntersectionPoint(Line other, out Vector2? intersectionPoint)
+        public readonly bool TryGetIntersectionPoint(Line other, out Vector2 intersectionPoint)
         {
             // this logic wasnt me
 
@@ -48,16 +48,15 @@ namespace MonoGamePixel2D.Collisions
                 return true;
             }
            
-            intersectionPoint = null;
+            intersectionPoint = default;
             return false;
         }
 
         //private readonly Vector2 GetLineDirs(Line other) {
 
-        public static bool TryGetIntersection(Line l1, Line l2, out Vector2? intersectionPoint)
+        public static bool TryGetIntersection(Line l1, Line l2, out Vector2 intersectionPoint)
         {
-            intersectionPoint = null;
-
+            intersectionPoint = default;
             float d =
             (l2.Y2 - l2.Y1) * (l1.X2 - l1.X1)
             -

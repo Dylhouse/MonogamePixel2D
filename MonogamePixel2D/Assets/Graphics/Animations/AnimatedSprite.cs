@@ -14,6 +14,20 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     private const string PREFIX = "anim";
     internal const string DEFAULT_SECTION_NAME = "default";
 
+    private int _direction = 1;
+
+    private double _frameProgress;
+
+    private Frame _frame;
+    private readonly Frame[] _frames;
+
+    private AnimationSection DefaultSection => _sections["default"];
+
+    private AnimationSection _section;
+    private readonly Dictionary<string, AnimationSection> _sections;
+
+    private bool _needsToRestart = false;
+
     private static readonly JsonSerializerOptions jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -97,20 +111,6 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     /// </summary>
     public event Action? Finished;
 
-    private int _direction = 1;
-
-    private double _frameProgress;
-
-    private Frame _frame;
-    private readonly Frame[] _frames;
-
-    private AnimationSection DefaultSection => _sections["default"];
-
-    private AnimationSection _section;
-    private readonly Dictionary<string, AnimationSection> _sections;
-
-    private bool _needsToRestart = false;
-
     #region Constructors
 
     /// <inheritdoc></inheritdoc>/>
@@ -159,6 +159,21 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     }
 
     #endregion
+
+    /// <summary>
+    /// Returns a sprite representation of the given <paramref name="frame"/>.
+    /// </summary>
+    /// <param name="frame">The requested frame.</param>
+    /// <returns>A sprite of the given <paramref name="frame"/>.</returns>
+    public AtlasSprite GetSprite(int frame) =>
+        new(Texture, _frames[frame].SourceRectangle);
+
+    /// <summary>
+    /// Returns a sprite representation of the current frame.
+    /// </summary>
+    /// <returns>A sprite of the current frame.</returns>
+    public AtlasSprite GetSprite() =>
+        new(Texture, _frame.SourceRectangle);
 
     /// <summary>
     /// Causes the animation to start playing using the given animation section. Does <b>not</b> reset

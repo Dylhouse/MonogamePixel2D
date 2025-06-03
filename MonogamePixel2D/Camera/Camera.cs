@@ -34,8 +34,9 @@ namespace MonoGamePixel2D.Camera
             get => new(_matrix.M41, _matrix.M42);
             set
             {
-                _matrix.M41 = value.X;
-                _matrix.M42 = value.Y;
+                // int cast to truncate
+                _matrix.M41 = (int)value.X;
+                _matrix.M42 = (int)value.Y;
             }
         }
 

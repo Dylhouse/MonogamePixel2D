@@ -31,9 +31,9 @@ namespace MonoGamePixel2D.Extensions
         public static Rectangle Multiply(Rectangle rectangle1, int scale) =>
             new(rectangle1.X * scale, rectangle1.Y * scale, rectangle1.Width * scale, rectangle1.Height * scale);
 
-        public static bool TryGetIntersection(this Rectangle rectangle1, Line line, out Vector2? intersection)
+        public static bool TryGetIntersection(this Rectangle rectangle1, Line line, out Vector2 intersection)
         {
-            intersection = null;
+            intersection = default;
 
             Span<Line> edges =
             [
@@ -49,7 +49,7 @@ namespace MonoGamePixel2D.Extensions
             {
                 if (Line.TryGetIntersection(line, edge, out var newIntersection))
                 {
-                    var length = Vector2.DistanceSquared(line.Start, newIntersection!.Value);
+                    var length = Vector2.DistanceSquared(line.Start, newIntersection);
                     if (length < dist)
                     {
                         intersection = newIntersection;
@@ -57,7 +57,8 @@ namespace MonoGamePixel2D.Extensions
                     }
                 }
             }
-            if (intersection is null) return false;
+
+            if (intersection == default) return false;
             return true;
         }
     }

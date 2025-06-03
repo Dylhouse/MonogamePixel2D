@@ -55,6 +55,8 @@ public static class InputManager
     /// <returns><c>true</c> if the action exists; <c>false</c> otherwise.</returns>
     public static bool ActionExists(string name) => _actions.ContainsKey(name);
 
+    public static bool GetKeyJustPressed(Keys key) => _currentKeyboardState.IsKeyDown(key) && _previousKeyboardState.IsKeyUp(key);
+
     #region Get Action
 
     /// <summary>
