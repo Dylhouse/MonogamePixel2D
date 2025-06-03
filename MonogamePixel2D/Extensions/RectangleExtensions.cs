@@ -31,6 +31,14 @@ namespace MonoGamePixel2D.Extensions
         public static Rectangle Multiply(Rectangle rectangle1, int scale) =>
             new(rectangle1.X * scale, rectangle1.Y * scale, rectangle1.Width * scale, rectangle1.Height * scale);
 
+        /// <summary>
+        /// Attempts to find the first <see cref="Vector2"/> intersection point between <paramref name="rectangle1"/> and <paramref name="line"/>.
+        /// </summary>
+        /// <param name="rectangle1">The <see cref="Rectangle"/> to poll an intersection with.</param>
+        /// <param name="line">The <see cref="Line"/> to poll an intersection with. The direction is important; <paramref name="intersection"/> 
+        /// will be the <b>first</b> intersection point found going from the line's start to finish.</param>
+        /// <param name="intersection">The point of intersection. Will be <see cref="Vector2"/> <see langword="default"/> if none is found.</param>
+        /// <returns></returns>
         public static bool TryGetIntersection(this Rectangle rectangle1, Line line, out Vector2 intersection)
         {
             intersection = default;
@@ -43,6 +51,7 @@ namespace MonoGamePixel2D.Extensions
                 new Line(rectangle1.Right, rectangle1.Top, rectangle1.Right, rectangle1.Bottom), // top-right bottom-right
             ];
 
+            bool intersectionFound = false;
             float dist = float.MaxValue;
 
             foreach (var edge in edges)
@@ -54,12 +63,13 @@ namespace MonoGamePixel2D.Extensions
                     {
                         intersection = newIntersection;
                         dist = length;
+
+                        intersectionFound = true;
                     }
                 }
             }
 
-            if (intersection == default) return false;
-            return true;
+            return intersectionFound;
         }
     }
 }
