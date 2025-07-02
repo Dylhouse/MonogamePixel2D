@@ -9,10 +9,17 @@ namespace MonoGamePixel2D.Assets.Graphics.Animations;
 /// <summary>
 /// A drawable object that contains multiple frames and and frame sections for animations.
 /// </summary>
-public class AnimatedSprite : IUpdatable, ILoadableAsset
+public class AnimatedSprite : IUpdatable, ISpriteSheetAsset, ILoadableAsset
 {
     private const string PREFIX = "anim";
     internal const string DEFAULT_SECTION_NAME = "default";
+
+    private static readonly JsonSerializerOptions jsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private Point _sourceRectOffset;
 
     private int _direction = 1;
 
@@ -27,11 +34,6 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     private readonly Dictionary<string, AnimationSection> _sections;
 
     private bool _needsToRestart = false;
-
-    private static readonly JsonSerializerOptions jsonOptions = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     /// <inheritdoc></inheritdoc>/>
     public static string Prefix => PREFIX;
@@ -69,7 +71,7 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     private double _speed = 1.0d;
 
     /// <summary>
-    /// The current frame index. Use <see cref="SetAbsoluteFrame(int)"/> to change it.
+    /// Gets the current frame index.
     /// </summary>
     public int FrameIndex { get; private set; }
 
@@ -128,9 +130,10 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
         return new AnimatedSprite(texture, DTO.Frames, DTO.Sections);
     }
 
-    public AnimatedSprite(Texture2D texture, Frame[] frames, AnimationSection[] sections)
+    public AnimatedSprite(Texture2D texture, Frame[] frames, AnimationSection[] sections, Point offset = default)
     {
         Texture = texture;
+        _sourceRectOffset = offset;
 
         _frames = frames;
         _frame = frames[0];
@@ -143,9 +146,10 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
         ReadyAnimationSection("default");
     }
 
-    public AnimatedSprite(Texture2D texture, Frame[] frames)
+    public AnimatedSprite(Texture2D texture, Frame[] frames, Point offset = default)
     {
         Texture = texture;
+        _sourceRectOffset = offset;
 
         this._frames = frames;
         _frame = frames[0];
@@ -161,18 +165,18 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     #endregion
 
     /// <summary>
-    /// Returns a sprite representation of the given <paramref name="frame"/>.
+    /// Creates a <see cref="StaticSprite"/> representation of the given <paramref name="frame"/>.
     /// </summary>
     /// <param name="frame">The requested frame.</param>
-    /// <returns>A sprite of the given <paramref name="frame"/>.</returns>
-    public AtlasSprite GetSprite(int frame) =>
+    /// <returns>The sprite of the given <paramref name="frame"/>.</returns>
+    public StaticSprite GetSprite(int frame) =>
         new(Texture, _frames[frame].SourceRectangle);
 
     /// <summary>
-    /// Returns a sprite representation of the current frame.
+    /// Creates a <see cref="StaticSprite"/> representation of the current frame.
     /// </summary>
-    /// <returns>A sprite of the current frame.</returns>
-    public AtlasSprite GetSprite() =>
+    /// <returns>The sprite of the current frame.</returns>
+    public StaticSprite GetSprite() =>
         new(Texture, _frame.SourceRectangle);
 
     /// <summary>
@@ -217,7 +221,7 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     /// Sets the absolute frame, disregarding any sections.
     /// </summary>
     /// <param name="index">The index of the new frame.</param>
-    public void SetAbsoluteFrame(System.Index index)
+    public void SetAbsoluteFrame(int index)
     {
         try
         {
@@ -230,7 +234,7 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
                 "The given frame index is invalid.", e);
         }
 
-        FrameIndex = index.Value;
+        FrameIndex = index;
     }
 
     /// <summary>
@@ -256,75 +260,89 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
     #region IComplexDrawable
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Color color)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color);
     }
 
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Rectangle? sourceRectangle, Color color)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         if (!sourceRectangle.HasValue)
         {
             spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle!.Value);
         spriteBatch.Draw(Texture, destinationRectangle, srcRectangle, color);
     }
 
     public void Draw(SpriteBatch spriteBatch, Rectangle destinationRectangle, Rectangle? sourceRectangle, Color color,
-        float rotation, Point origin, SpriteEffects effects, float layerDepth)
+        float rotation, Vector2 origin, SpriteEffects effects, float layerDepth)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color, rotation, origin.ToVector2(), effects, layerDepth);
+            spriteBatch.Draw(Texture, destinationRectangle, _frame.SourceRectangle, color, rotation, origin, effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
-        spriteBatch.Draw(Texture, destinationRectangle, srcRectangle, color, rotation, origin.ToVector2(), effects, layerDepth);
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle!.Value);
+        spriteBatch.Draw(Texture, destinationRectangle, srcRectangle, color, rotation, origin, effects, layerDepth);
     }
 
-    public void Draw(SpriteBatch spriteBatch, Point position, Color color)
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color)
     {
-        spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color);
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
+        spriteBatch.Draw(Texture, position, _frame.SourceRectangle, color);
     }
 
-    public void Draw(SpriteBatch spriteBatch, Point position, Rectangle? sourceRectangle, Color color)
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, Rectangle? sourceRectangle, Color color)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color);
+            spriteBatch.Draw(Texture, position, _frame.SourceRectangle, color);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
-        spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color);
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle!.Value);
+        spriteBatch.Draw(Texture, position, srcRectangle, color);
     }
 
-    public void Draw(SpriteBatch spriteBatch, Point position, Rectangle? sourceRectangle, Color color,
-        float rotation, Point origin, Vector2 scale, SpriteEffects effects, float layerDepth)
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, Rectangle? sourceRectangle, Color color,
+        float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+            spriteBatch.Draw(Texture, position, _frame.SourceRectangle, color, rotation, origin, scale, effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
-        spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle!.Value);
+        spriteBatch.Draw(Texture, position, srcRectangle, color, rotation, origin, scale, effects, layerDepth);
     }
 
-    public void Draw(SpriteBatch spriteBatch, Point position, Rectangle? sourceRectangle, Color color,
-        float rotation, Point origin, float scale, SpriteEffects effects, float layerDepth)
+    public void Draw(SpriteBatch spriteBatch, Vector2 position, Rectangle? sourceRectangle, Color color,
+        float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
     {
+        var frameRect = _frame.SourceRectangle;
+        frameRect.Location += _sourceRectOffset;
         if (!sourceRectangle.HasValue)
         {
-            spriteBatch.Draw(Texture, position.ToVector2(), _frame.SourceRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+            spriteBatch.Draw(Texture, position, _frame.SourceRectangle, color, rotation, origin, scale, effects, layerDepth);
             return;
         }
 
-        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle.GetValueOrDefault());
-        spriteBatch.Draw(Texture, position.ToVector2(), srcRectangle, color, rotation, origin.ToVector2(), scale, effects, layerDepth);
+        Rectangle srcRectangle = TextureUtils.GetClampedSourceRectangle(_frame.SourceRectangle, sourceRectangle!.Value);
+        spriteBatch.Draw(Texture, position, srcRectangle, color, rotation, origin, scale, effects, layerDepth);
     }
 
     public void GetData(Color[] data)
@@ -408,4 +426,15 @@ public class AnimatedSprite : IUpdatable, ILoadableAsset
         SetInitialDirection();
         SetAbsoluteFrame(_section.StartIndex);
     }
+
+    public static object Load(Texture2D atlasTexture, Rectangle sourceRectangle, string path)
+    {
+        var animJson = File.ReadAllText(Path.ChangeExtension(path, ".json"));
+        var dto = JsonSerializer.Deserialize<AnimatedSpriteDTO>(animJson, jsonOptions);
+
+        return new AnimatedSprite(atlasTexture, dto.Frames, dto.Sections, sourceRectangle.Location);
+    }
+
+    public static void Unload(ContentManager content, string contentPath) =>
+        content.UnloadAsset(contentPath);
 }

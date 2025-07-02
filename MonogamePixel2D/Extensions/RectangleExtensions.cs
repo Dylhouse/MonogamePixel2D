@@ -3,6 +3,7 @@ using MonoGamePixel2D.Collisions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -27,6 +28,31 @@ namespace MonoGamePixel2D.Extensions
                 3 => rectangle.Height,
                 _ => throw new ArgumentException("Property index must be 0-3, inclusive"),
             };
+
+        public static Rectangle RelativeIntersection(this Rectangle a, Rectangle b) =>
+            Intersection(a, new Rectangle(a.X + b.X, a.Y + b.Y, b.Width, b.Height));
+
+        /// <summary>
+        /// Gets the overlapping area between two rectangles.
+        /// </summary>
+        /// <param name="a">The first rectangle.</param>
+        /// <param name="b">The second rectangle.</param>
+        /// <returns><see cref="Rectangle.Empty"/> if there is no intersection; otherwise, the rectangular area of the inters
+        /// ection between both rectangles.</returns>
+        public static Rectangle Intersection(this Rectangle a, Rectangle b)
+        {
+            int x1 = Math.Max(a.Left, b.Left);
+            int y1 = Math.Max(a.Top, b.Top);
+            int x2 = Math.Min(a.Right, b.Right);
+            int y2 = Math.Min(a.Bottom, b.Bottom);
+
+            int width = x2 - x1;
+            if (width <= 0) return Rectangle.Empty;
+            int height = y2 - y1;
+            if (height <= 0) return Rectangle.Empty;
+
+            return new Rectangle(x1, y1, width, height);
+        }
 
         public static Rectangle Multiply(Rectangle rectangle1, int scale) =>
             new(rectangle1.X * scale, rectangle1.Y * scale, rectangle1.Width * scale, rectangle1.Height * scale);

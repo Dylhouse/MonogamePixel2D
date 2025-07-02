@@ -18,5 +18,7 @@ namespace MonoGamePixel2D.Extensions
         /// <param name="gameTime"></param>
         /// <returns>The current FPS of the game.</returns>
         public static double GetFPS(this GameTime gameTime) => 1.0d / gameTime.ElapsedGameTime.TotalSeconds;
+
+        public static float GetFDelta(this GameTime gameTime) => (float)gameTime.ElapsedGameTime.TotalSeconds;
     }
 }

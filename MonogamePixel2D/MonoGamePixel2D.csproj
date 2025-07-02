@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Assets\Sprites\" />
     <Folder Include="Display\" />
     <Folder Include="Tiles\" />
   </ItemGroup>

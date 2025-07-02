@@ -24,7 +24,7 @@ public class Timer : IUpdatable
         /// <summary>
         /// Will cause the timer to continue once it is finished, while maintaining the remaining time.
         /// For example, if a frame lasts for 0.4 seconds and the timer has 0.1 seconds left of 1.0 duration,
-        /// it will go to 0.7 seconds left. This can also lead to <c>Finished</c> being invoked multiple times
+        /// it will go to 0.7 seconds left. This can also lead to <see cref="Finished"/> being invoked multiple times
         /// in one frame.
         /// </summary>
         ContinousLoop
@@ -32,7 +32,7 @@ public class Timer : IUpdatable
 
     private TimeSpan _progress = TimeSpan.Zero;
 
-    private bool _running = true;
+    private bool _running;
 
     #region Properties
     /// <summary>
@@ -64,14 +64,17 @@ public class Timer : IUpdatable
     #endregion
 
     /// <summary>
-    /// Creates a new <c>Timer</c>.
+    /// Creates a new <see cref="Timer"/>. Does not start until <see cref="Start"/> is called.
     /// </summary>
     /// <param name="duration">The duration of the timer.</param>
     /// <param name="loopMode">Determines how the timer will or won't loop when it finishes.</param>
-    public Timer(TimeSpan duration, LoopMode loopMode = LoopMode.NoLoop)
+    /// <param name="started"><see cref="Timer"/> is automatically started if <see langword="true"/>, otherwise
+    /// <see cref="Start"/> will need to be called.</param>
+    public Timer(TimeSpan duration, LoopMode loopMode = LoopMode.NoLoop, bool started = true)
     {
         Duration = duration;
         Loop = loopMode;
+        _running = started;
     }
 
     /// <summary>

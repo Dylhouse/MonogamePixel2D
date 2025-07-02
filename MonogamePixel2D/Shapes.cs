@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGamePixel2D.Collisions;
 using MonoGamePixel2D.Extensions;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,9 @@ namespace MonoGamePixel2D
             var scale = new Vector2(length, thickness);
             spriteBatch.Draw(Pixel.GetTexture(spriteBatch), point, null, color, angle, origin, scale, SpriteEffects.None, 0);
         }
+
+        public static void DrawLine(this SpriteBatch spriteBatch, Line line, Color color, float thickness = 1.0f) =>
+            DrawLine(spriteBatch, line.Start, line.End, color, thickness);
 
         public static void DrawRect(this SpriteBatch spriteBatch, Point pos, Point size, Color color) =>
             DrawRect(spriteBatch, new Rectangle(pos, size), color);

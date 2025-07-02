@@ -22,13 +22,6 @@ public class RectangleConverter : JsonConverter<Rectangle>
         return new Rectangle(x, y, w, h);
     }
 
-    /*
-    public override void Write(Utf8JsonWriter writer, Rectangle value, JsonSerializerOptions options)
-    {
-        JsonSerializer.Serialize(writer, value, options);
-    }
-    */
-
     public override void Write(Utf8JsonWriter writer, Rectangle value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
