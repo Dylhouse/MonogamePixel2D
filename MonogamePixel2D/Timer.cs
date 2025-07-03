@@ -128,11 +128,10 @@ public class Timer : IUpdatable
         {
             if (_progress >= Duration)
             {
-                _progress = Duration;
+                _progress = TimeSpan.Zero;
                 Finished?.Invoke();
 
                 if (Loop == LoopMode.NoLoop) _running = false;
-                else _progress = TimeSpan.Zero;
             }
         }
     }
