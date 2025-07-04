@@ -68,13 +68,16 @@ public class Timer : IUpdatable
     /// </summary>
     /// <param name="duration">The duration of the timer.</param>
     /// <param name="loopMode">Determines how the timer will or won't loop when it finishes.</param>
+    /// <param name="callback">Delegate to be called once the timer finishes. 
+    /// Additional callbacks can be added with the <see cref="Finished"/> event.</param>
     /// <param name="started"><see cref="Timer"/> is automatically started if <see langword="true"/>, otherwise
     /// <see cref="Start"/> will need to be called.</param>
-    public Timer(TimeSpan duration, LoopMode loopMode = LoopMode.NoLoop, bool started = true)
+    public Timer(TimeSpan duration, LoopMode loopMode = LoopMode.NoLoop, Action? callback = null, bool started = true)
     {
         Duration = duration;
         Loop = loopMode;
         _running = started;
+        if (callback != null) Finished += callback;
     }
 
     /// <summary>
