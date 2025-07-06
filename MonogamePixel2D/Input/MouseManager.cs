@@ -108,7 +108,7 @@ namespace MonoGamePixel2D.Input
         private static Point VirtualPos(MouseState state)
         {
             Debug.Assert(_windowData != null);
-            int mouseX = (state.X + _windowData.XOffset) / _windowData.WindowScale;
+            int mouseX = (state.X - _windowData.XOffset) / _windowData.WindowScale;
             int mouseY = (state.Y - _windowData.YOffset) / _windowData.WindowScale;
             return new Point(mouseX, mouseY);
         }
