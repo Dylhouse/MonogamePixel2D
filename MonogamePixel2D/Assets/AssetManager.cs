@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using System.Text.Json;
+using System.Windows.Input;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGamePixel2D.Assets.Graphics;
@@ -31,7 +32,19 @@ public class AssetManager
         _contentManager = content;
 
         var dict = new Dictionary<string, string>();
-        foreach (var path in Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories))
+
+        string[] assetFiles;
+        try
+        {
+            assetFiles = Directory.GetFiles(Path.Combine(content.RootDirectory, assetDir), "*", SearchOption.AllDirectories);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+            return;
+        }
+
+        foreach (var path in assetFiles)
         {
             if (Path.GetExtension(path) == ".json") continue;
 

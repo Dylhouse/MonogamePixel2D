@@ -45,7 +45,7 @@ public class AnimatedSprite : IUpdatable, ISpriteSheetAsset, ILoadableAsset
     /// Returns whether the animation is playing and advancing frames.
     /// Use <c>Play</c> to begin playback.
     /// </summary>
-    public bool IsPlaying { get; private set; }
+    public bool IsPlaying { get; private set; } = true;
 
     /// <summary>
     /// Determines whether the animation will loop (as determined by AnimationDirection)

@@ -29,6 +29,9 @@ namespace MonoGamePixel2D.GUI
 
         public Point DrawPos { get; set; }
 
+        public Color TextColor { get; set; }
+        public Color CursorColor { get; set; }
+
         public bool Active
         {
             get => _active;
@@ -45,7 +48,7 @@ namespace MonoGamePixel2D.GUI
         }
         private bool _active = false;
 
-        public TextBox(SpriteFont font, SpriteBatch spriteBatch, Point drawPos)
+        public TextBox(SpriteFont font, SpriteBatch spriteBatch, Point drawPos, Color textColor, Color cursorColor)
         {
             _cursorBlinkTimer = new(CursorBlinkSpeed, Timer.LoopMode.ContinousLoop);
             _cursorBlinkTimer.Finished += OnBlinkTimerFinished;
@@ -55,7 +58,11 @@ namespace MonoGamePixel2D.GUI
             _font = font;
             _spriteBatch = spriteBatch;
             DrawPos = drawPos;
+
+            TextColor = textColor;
+            CursorColor = cursorColor;
         }
+        public TextBox(SpriteFont font, SpriteBatch spriteBatch, Point drawPos) : this(font, spriteBatch, drawPos, Color.White, Color.Aqua) { }
 
         public void Update(GameTime gameTime)
         {
@@ -66,7 +73,7 @@ namespace MonoGamePixel2D.GUI
 
         public void Draw(GameTime gameTime)
         {
-            _spriteBatch.DrawString(_font, _textInputData.ToString(), DrawPos.ToVector2(), Color.White);
+            _spriteBatch.DrawString(_font, _textInputData.ToString(), DrawPos.ToVector2(), TextColor);
 
             if (Active)
             {
@@ -75,7 +82,7 @@ namespace MonoGamePixel2D.GUI
                 if (_cursorVisible)
                 {
                     var cursorStr = new string(' ', _textInputData.CursorIndex) + '_' + new string(' ', _textInputData.Text.Length - _textInputData.CursorIndex);
-                    _spriteBatch.DrawString(_font, cursorStr, (DrawPos + CursorOffset).ToVector2(), Color.Aqua);
+                    _spriteBatch.DrawString(_font, cursorStr, (DrawPos + CursorOffset).ToVector2(), CursorColor);
                 }
             }
         }

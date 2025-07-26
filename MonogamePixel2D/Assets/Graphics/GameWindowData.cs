@@ -12,27 +12,27 @@ public class GameWindowData
     /// <summary>
     /// The width of the user's display.
     /// </summary>
-    public int DisplayWidth { get { return displayWidth; } }
+    public int DisplayWidth { get { return _displayWidth; } }
 
-    private readonly int displayHeight;
+    private readonly int _displayHeight;
     /// <summary>
     /// The height of the user's display.
     /// </summary>
-    public int DisplayHeight { get { return displayHeight; } }
+    public int DisplayHeight { get { return _displayHeight; } }
 
-    private readonly int displayWidth;
+    private readonly int _displayWidth;
 
-    private readonly int virtualWidth;
+    private readonly int _virtualWidth;
     /// <summary>
     /// The width of the game's native resolution.
     /// </summary>
-    public int VirtualWidth { get { return virtualWidth; } }
+    public int VirtualWidth { get { return _virtualWidth; } }
 
-    private readonly int virtualHeight;
+    private readonly int _virtualHeight;
     /// <summary>
     /// The height of the game's native resolution.
     /// </summary>
-    public int VirtualHeight { get { return virtualHeight; } }
+    public int VirtualHeight { get { return _virtualHeight; } }
 
     /// <summary>
     /// The integer scale that is applied to the game's native resolution
@@ -63,15 +63,15 @@ public class GameWindowData
     /// </summary>
     /// <param name="virtualWidth">The width of the game's native resolution.</param>
     /// <param name="virtualHeight">The height of the game's native resolution.</param>
-    public GameWindowData(int virtualWidth, int virtualHeight)
+    public GameWindowData(int virtualWidth, int virtualHeight, int displayWidth, int displayHeight)
     {
-        this.virtualWidth = virtualWidth;
-        this.virtualHeight = virtualHeight;
+        this._virtualWidth = virtualWidth;
+        this._virtualHeight = virtualHeight;
 
         vRect = new Rectangle(0, 0, virtualWidth, virtualHeight);
 
-        displayWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-        displayHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+        _displayWidth = displayWidth;
+        _displayHeight = displayHeight;
 
         int wScale = displayWidth / virtualWidth;
         int hScale = displayHeight / virtualHeight;
@@ -83,6 +83,30 @@ public class GameWindowData
             (displayHeight - virtualHeight * WindowScale) / 2,
             virtualWidth * WindowScale,
             virtualHeight * WindowScale);
+    }
+
+    public GameWindowData(int virtualWidth, int virtualHeight) : this(
+        virtualWidth,
+        virtualHeight,
+        GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width,
+        GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height
+        )
+    { }
+
+    public GameWindowData(int virtualWidth, int virtualHeight, int scale)
+    {
+        this._virtualWidth = virtualWidth;
+        this._virtualHeight = virtualHeight;
+        _displayWidth = virtualWidth * scale;
+        _displayHeight = virtualHeight * scale;
+
+        vRect = new Rectangle(0, 0, virtualWidth, virtualHeight);
+
+        Gameport = new Rectangle(
+            0,
+            0,
+            virtualWidth * scale,
+            virtualHeight * scale);
     }
 
     /// <summary>
@@ -98,6 +122,6 @@ public class GameWindowData
         graphicsManager.PreferredBackBufferHeight = DisplayHeight;
         graphicsManager.ApplyChanges();
 
-        return new(graphicsManager.GraphicsDevice, virtualWidth, virtualHeight);
+        return new(graphicsManager.GraphicsDevice, _virtualWidth, _virtualHeight);
     }
 }

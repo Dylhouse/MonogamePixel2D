@@ -26,6 +26,21 @@ namespace MonoGamePixel2D.Assets
         /// </summary>
         public Rectangle SourceRectangle { get; set; }
 
+        /// <summary>
+        /// The sprite's width in pixels.
+        /// </summary>
+        public int Width => SourceRectangle.Width;
+
+        /// <summary>
+        /// The sprite's height in pixels.
+        /// </summary>
+        public int Height => SourceRectangle.Height;
+
+        /// <summary>
+        /// The sprite's width and height in pixels.
+        /// </summary>
+        public Point Size => SourceRectangle.Size;
+
 
         /// <inheritdoc/>
         public static object Load(Texture2D texture, Rectangle sourceRectangle, string path) =>
